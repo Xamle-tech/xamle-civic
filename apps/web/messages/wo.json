@@ -1,0 +1,68 @@
+{
+  "nav": {
+    "home": "Keur",
+    "policies": "Politikaay yu Dëkk",
+    "map": "Karto",
+    "dashboard": "Tableau de bord",
+    "analytics": "Analytiques",
+    "contribute": "Xam-xam bi",
+    "login": "Dugg",
+    "register": "Bindal sa xol",
+    "logout": "Génn",
+    "admin": "Administration",
+    "myProfile": "Sa profil"
+  },
+  "home": {
+    "hero": {
+      "title": "Sëkk politikaay yu dëkk yu Senegaal",
+      "subtitle": "Feebar, données yu vérifié ak dankal jëkkër ngir Senegaal bu diis.",
+      "cta": "Xoolal politikaay yi",
+      "ctaSecondary": "Xam-xam bi"
+    },
+    "stats": {
+      "policies": "Politikaay yu sëkk",
+      "completionRate": "Taux réalisation",
+      "contributions": "Xam-xam yu jëkkëram",
+      "users": "Jëkkëram yi noonu"
+    },
+    "sections": {
+      "featured": "Politikaay yu am solo",
+      "latest": "Mise à jour yu mujj",
+      "ministries": "Ministère yi",
+      "map": "Karto intercative"
+    }
+  },
+  "status": {
+    "NOT_STARTED": "Dëkkul ci kanam",
+    "IN_PROGRESS": "Ci kanam na",
+    "DELAYED": "Ci kanam wàcc",
+    "COMPLETED": "Jeexna",
+    "ABANDONED": "Bëggul",
+    "REFORMULATED": "Tëjje na"
+  },
+  "theme": {
+    "HEALTH": "Wér-wér",
+    "EDUCATION": "Jàng",
+    "INFRASTRUCTURE": "Infrastructure",
+    "AGRICULTURE": "Mbey",
+    "JUSTICE": "Dëggu",
+    "SECURITY": "Sëriñ",
+    "DIGITAL": "Numérique",
+    "ENVIRONMENT": "Xam-xam",
+    "OTHER": "Yenn"
+  },
+  "common": {
+    "loading": "Di nanu jël...",
+    "error": "Aju na",
+    "retry": "Seetaan",
+    "seeAll": "Xool yépp",
+    "cancel": "Bàyyee",
+    "search": "Seet",
+    "filter": "Filtre",
+    "export": "Suddu",
+    "back": "Dellu",
+    "source": "Tànku",
+    "verified": "Sàttal na",
+    "official": "Officiel"
+  }
+}

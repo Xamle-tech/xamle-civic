@@ -1,0 +1,175 @@
+version: "3.9"
+
+# ============================================================
+# Xamle Civic — Development Docker Compose
+# Run: docker compose up -d
+# ============================================================
+
+networks:
+  xamle-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+  meilidata:
+  strapidata:
+
+services:
+  # ─── PostgreSQL 16 ───────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: xamle-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-xamle}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-xamle_secret_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-xamle_civic}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - xamle-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-xamle}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis 7 ─────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: xamle-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_secret_change_me} --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6380:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - xamle-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_secret_change_me}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Meilisearch v1.7 ────────────────────────────────────
+  meilisearch:
+    image: getmeili/meilisearch:v1.7
+    container_name: xamle-meilisearch
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY:-meilisearch_master_key_change_me}
+      MEILI_ENV: development
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilidata:/meili_data
+    networks:
+      - xamle-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ─── MinIO (self-hosted S3) ───────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: xamle-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-xamle_minio_access}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-xamle_minio_secret_change_me}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    networks:
+      - xamle-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ─── MinIO bucket init ────────────────────────────────────
+  minio-init:
+    image: minio/mc:latest
+    container_name: xamle-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - xamle-net
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ACCESS_KEY:-xamle_minio_access} ${MINIO_SECRET_KEY:-xamle_minio_secret_change_me};
+      mc mb --ignore-existing local/${MINIO_BUCKET_DOCUMENTS:-xamle-documents};
+      mc mb --ignore-existing local/${MINIO_BUCKET_MEDIA:-xamle-media};
+      mc anonymous set download local/${MINIO_BUCKET_MEDIA:-xamle-media};
+      echo 'MinIO buckets initialized';
+      "
+
+  # ─── Strapi 5 (Headless CMS) ─────────────────────────────
+  strapi:
+    image: node:20-alpine
+    container_name: xamle-strapi
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm install && npm run develop"
+    environment:
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: xamle_strapi
+      DATABASE_USERNAME: ${POSTGRES_USER:-xamle}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-xamle_secret_change_me}
+      DATABASE_SSL: "false"
+      APP_KEYS: ${STRAPI_APP_KEYS:-key1_change,key2_change,key3_change,key4_change}
+      API_TOKEN_SALT: ${STRAPI_API_TOKEN_SALT:-strapi_token_salt_change_me}
+      ADMIN_JWT_SECRET: ${STRAPI_ADMIN_JWT:-strapi_admin_jwt_change_me}
+      JWT_SECRET: ${STRAPI_JWT:-strapi_jwt_change_me}
+      NODE_ENV: development
+    ports:
+      - "1337:1337"
+    volumes:
+      - strapidata:/app
+    networks:
+      - xamle-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ─── Uptime Kuma (monitoring) ────────────────────────────
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: xamle-uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "${UPTIME_KUMA_PORT:-3001}:3001"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - xamle-net
+
+  # ─── Nginx (reverse proxy) ───────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: xamle-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - xamle-net
+    depends_on:
+      - meilisearch
+      - minio

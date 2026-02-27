@@ -1,0 +1,171 @@
+version: "3.9"
+
+# ============================================================
+# Xamle Civic — Production Docker Compose
+# Run: docker compose -f docker-compose.prod.yml up -d
+# ============================================================
+
+networks:
+  xamle-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+  meilidata:
+  strapidata:
+  certbot-webroot:
+  certbot-certs:
+
+services:
+  # ─── PostgreSQL 16 ───────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: xamle-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - xamle-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis 7 ─────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: xamle-redis
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD} --maxmemory 512mb --maxmemory-policy allkeys-lru --save 60 1
+    volumes:
+      - redisdata:/data
+    networks:
+      - xamle-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Meilisearch ─────────────────────────────────────────
+  meilisearch:
+    image: getmeili/meilisearch:v1.7
+    container_name: xamle-meilisearch
+    restart: always
+    environment:
+      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY}
+      MEILI_ENV: production
+    volumes:
+      - meilidata:/meili_data
+    networks:
+      - xamle-net
+
+  # ─── MinIO ───────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: xamle-minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - miniodata:/data
+    networks:
+      - xamle-net
+
+  # ─── NestJS API ──────────────────────────────────────────
+  api:
+    image: ghcr.io/${GITHUB_REPOSITORY}/api:${IMAGE_TAG:-latest}
+    container_name: xamle-api
+    restart: always
+    env_file: .env
+    networks:
+      - xamle-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─── Next.js Web ─────────────────────────────────────────
+  web:
+    image: ghcr.io/${GITHUB_REPOSITORY}/web:${IMAGE_TAG:-latest}
+    container_name: xamle-web
+    restart: always
+    env_file: .env
+    networks:
+      - xamle-net
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─── Strapi ──────────────────────────────────────────────
+  strapi:
+    image: ghcr.io/${GITHUB_REPOSITORY}/strapi:${IMAGE_TAG:-latest}
+    container_name: xamle-strapi
+    restart: always
+    env_file: .env
+    volumes:
+      - strapidata:/app/public/uploads
+    networks:
+      - xamle-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ─── Nginx + Let's Encrypt ───────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: xamle-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - certbot-webroot:/var/www/certbot:ro
+      - certbot-certs:/etc/letsencrypt:ro
+    networks:
+      - xamle-net
+    depends_on:
+      - web
+      - api
+      - strapi
+
+  # ─── Certbot (SSL) ───────────────────────────────────────
+  certbot:
+    image: certbot/certbot
+    container_name: xamle-certbot
+    volumes:
+      - certbot-webroot:/var/www/certbot
+      - certbot-certs:/etc/letsencrypt
+    command: certonly --webroot --webroot-path=/var/www/certbot --email ${SSL_EMAIL} --agree-tos --no-eff-email -d ${DOMAIN} -d www.${DOMAIN}
+
+  # ─── Uptime Kuma ─────────────────────────────────────────
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: xamle-uptime-kuma
+    restart: always
+    ports:
+      - "3001:3001"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - xamle-net

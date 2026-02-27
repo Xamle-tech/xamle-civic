@@ -1,0 +1,191 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "policies": "Politiques publiques",
+    "map": "Carte",
+    "dashboard": "Tableau de bord",
+    "analytics": "Analytiques",
+    "contribute": "Contribuer",
+    "login": "Connexion",
+    "register": "S'inscrire",
+    "logout": "Déconnexion",
+    "admin": "Administration",
+    "myProfile": "Mon profil"
+  },
+  "home": {
+    "hero": {
+      "title": "Suivez les politiques publiques sénégalaises",
+      "subtitle": "Transparence, données vérifiées et participation citoyenne pour construire un Sénégal juste et équitable.",
+      "cta": "Explorer les politiques",
+      "ctaSecondary": "Contribuer"
+    },
+    "stats": {
+      "policies": "Politiques suivies",
+      "completionRate": "Taux de réalisation global",
+      "contributions": "Contributions citoyennes",
+      "users": "Citoyens inscrits"
+    },
+    "sections": {
+      "featured": "Politiques en focus",
+      "latest": "Dernières mises à jour",
+      "ministries": "Par ministère",
+      "map": "Carte interactive"
+    }
+  },
+  "policies": {
+    "title": "Politiques publiques",
+    "subtitle": "Suivez les engagements de l'État sénégalais",
+    "filterBy": "Filtrer par",
+    "theme": "Thème",
+    "status": "Statut",
+    "ministry": "Ministère",
+    "region": "Région",
+    "search": "Rechercher une politique...",
+    "noResults": "Aucune politique ne correspond à votre recherche.",
+    "showingResults": "Affichage de {count} politiques",
+    "detail": {
+      "overview": "Vue d'ensemble",
+      "indicators": "Indicateurs",
+      "timeline": "Chronologie",
+      "sources": "Sources",
+      "contributions": "Contributions",
+      "comments": "Commentaires",
+      "budget": "Budget",
+      "allocated": "Alloué",
+      "spent": "Dépensé",
+      "progress": "Avancement",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "ministry": "Ministère responsable",
+      "status": "Statut actuel",
+      "lastUpdate": "Dernière mise à jour"
+    }
+  },
+  "status": {
+    "NOT_STARTED": "Non démarré",
+    "IN_PROGRESS": "En cours",
+    "DELAYED": "En retard",
+    "COMPLETED": "Achevé",
+    "ABANDONED": "Abandonné",
+    "REFORMULATED": "Reformulé"
+  },
+  "theme": {
+    "HEALTH": "Santé",
+    "EDUCATION": "Éducation",
+    "INFRASTRUCTURE": "Infrastructure",
+    "AGRICULTURE": "Agriculture",
+    "JUSTICE": "Justice",
+    "SECURITY": "Sécurité",
+    "DIGITAL": "Numérique",
+    "ENVIRONMENT": "Environnement",
+    "OTHER": "Autre"
+  },
+  "region": {
+    "DAKAR": "Dakar",
+    "THIES": "Thiès",
+    "SAINT_LOUIS": "Saint-Louis",
+    "LOUGA": "Louga",
+    "FATICK": "Fatick",
+    "KAOLACK": "Kaolack",
+    "DIOURBEL": "Diourbel",
+    "ZIGUINCHOR": "Ziguinchor",
+    "KOLDA": "Kolda",
+    "TAMBACOUNDA": "Tambacounda",
+    "KEDOUGOU": "Kédougou",
+    "MATAM": "Matam",
+    "KAFFRINE": "Kaffrine",
+    "SEDHIOU": "Sédhiou"
+  },
+  "contributions": {
+    "title": "Contribution citoyenne",
+    "subtitle": "Partagez votre témoignage terrain",
+    "policyLabel": "Politique concernée",
+    "type": "Type de contribution",
+    "TESTIMONY": "Témoignage",
+    "DOCUMENT": "Document officiel",
+    "LINK": "Lien web",
+    "PHOTO": "Photo",
+    "content": "Description",
+    "contentPlaceholder": "Décrivez votre observation terrain en détail...",
+    "location": "Localisation (ville/commune)",
+    "file": "Pièce jointe (PDF ou image, max 10 Mo)",
+    "submit": "Soumettre ma contribution",
+    "submitting": "Envoi en cours...",
+    "success": "Contribution soumise avec succès. Elle sera examinée par notre équipe.",
+    "error": "Erreur lors de la soumission. Veuillez réessayer.",
+    "pending": "En attente de modération",
+    "approved": "Approuvée",
+    "rejected": "Rejetée"
+  },
+  "auth": {
+    "login": {
+      "title": "Connexion",
+      "email": "Adresse email",
+      "password": "Mot de passe",
+      "forgotPassword": "Mot de passe oublié ?",
+      "submit": "Se connecter",
+      "orContinueWith": "Ou continuer avec",
+      "noAccount": "Pas encore de compte ?",
+      "register": "S'inscrire"
+    },
+    "register": {
+      "title": "Créer un compte",
+      "name": "Nom complet",
+      "email": "Adresse email",
+      "phone": "Téléphone (ex: +221771234567)",
+      "password": "Mot de passe",
+      "passwordHint": "Au moins 8 caractères, avec majuscule, minuscule et chiffre",
+      "consent": "J'accepte les conditions d'utilisation et la politique de confidentialité",
+      "submit": "Créer mon compte",
+      "alreadyHaveAccount": "Déjà inscrit ?",
+      "login": "Se connecter"
+    }
+  },
+  "dashboard": {
+    "title": "Tableau de bord citoyen",
+    "subtitle": "Vue d'ensemble des politiques publiques sénégalaises",
+    "globalRate": "Taux de réalisation global",
+    "byTheme": "Par thème",
+    "byMinistry": "Par ministère",
+    "byRegion": "Par région",
+    "recentUpdates": "Mises à jour récentes",
+    "trending": "Politiques populaires",
+    "filters": {
+      "period": "Période",
+      "allTime": "Tout le temps",
+      "last30": "30 derniers jours",
+      "last90": "90 derniers jours",
+      "year": "Cette année"
+    }
+  },
+  "common": {
+    "loading": "Chargement...",
+    "error": "Une erreur est survenue",
+    "retry": "Réessayer",
+    "seeAll": "Voir tout",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "export": "Exporter",
+    "share": "Partager",
+    "source": "Source",
+    "verified": "Vérifié",
+    "official": "Officiel",
+    "updatedAt": "Mis à jour le {date}",
+    "readMore": "Lire la suite",
+    "budget": "Budget",
+    "xof": "FCFA"
+  },
+  "meta": {
+    "siteTitle": "Xamle Civic — Transparence des politiques publiques sénégalaises",
+    "siteDescription": "Plateforme citoyenne de suivi et d'évaluation des politiques publiques du Sénégal. Suivez les engagements de l'État, contribuez et participez.",
+    "ogImage": "/og-image.png"
+  }
+}

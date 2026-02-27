@@ -1,0 +1,405 @@
+// ============================================================
+// Xamle Civic — Prisma Schema
+// PostgreSQL 16 | Prisma ORM
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────
+
+enum PolicyStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  DELAYED
+  COMPLETED
+  ABANDONED
+  REFORMULATED
+}
+
+enum PolicyTheme {
+  HEALTH
+  EDUCATION
+  INFRASTRUCTURE
+  AGRICULTURE
+  JUSTICE
+  SECURITY
+  DIGITAL
+  ENVIRONMENT
+  OTHER
+}
+
+enum SourceType {
+  OFFICIAL
+  VERIFIED
+  REPORTED
+  UNVERIFIED
+}
+
+enum ContributionType {
+  TESTIMONY
+  DOCUMENT
+  LINK
+  PHOTO
+}
+
+enum ContributionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  MODERATOR
+  EDITOR
+  CONTRIBUTOR
+  VISITOR
+}
+
+enum UserLevel {
+  OBSERVER
+  CONTRIBUTOR
+  EXPERT
+  AMBASSADOR
+}
+
+enum WorkflowStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+enum VoteTargetType {
+  POLICY
+  CONTRIBUTION
+  COMMENT
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  IN_APP
+}
+
+enum SenegalRegion {
+  DAKAR
+  THIES
+  SAINT_LOUIS
+  LOUGA
+  FATICK
+  KAOLACK
+  DIOURBEL
+  ZIGUINCHOR
+  KOLDA
+  TAMBACOUNDA
+  KEDOUGOU
+  MATAM
+  KAFFRINE
+  SEDHIOU
+}
+
+// ─── Ministry ───────────────────────────────────────────────
+
+model Ministry {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  logo        String?
+  description String?
+  website     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  policies Policy[]
+
+  @@map("ministries")
+}
+
+// ─── Policy ─────────────────────────────────────────────────
+
+model Policy {
+  id             String         @id @default(cuid())
+  title          String
+  slug           String         @unique
+  description    String         @db.Text
+  ministryId     String
+  ministry       Ministry       @relation(fields: [ministryId], references: [id])
+  theme          PolicyTheme
+  status         PolicyStatus   @default(NOT_STARTED)
+  workflowStatus WorkflowStatus @default(DRAFT)
+  budget         Decimal?       @db.Decimal(15, 2)
+  budgetSpent    Decimal?       @db.Decimal(15, 2)
+  startDate      DateTime?
+  endDate        DateTime?
+  targetKpis     Json           @default("[]")
+  region         SenegalRegion?
+  version        Int            @default(1)
+  publishedAt    DateTime?
+  createdBy      String
+  createdByUser  User           @relation("PolicyCreator", fields: [createdBy], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  indicators    Indicator[]
+  statusHistory StatusHistory[]
+  sources       Source[]
+  versions      PolicyVersion[]
+  contributions Contribution[]
+  comments      Comment[]
+  votes         Vote[]          @relation("PolicyVotes")
+  subscriptions Subscription[]
+
+  @@index([ministryId])
+  @@index([theme])
+  @@index([status])
+  @@index([region])
+  @@index([workflowStatus])
+  @@map("policies")
+}
+
+// ─── PolicyVersion (immutable snapshots) ────────────────────
+
+model PolicyVersion {
+  id        String   @id @default(cuid())
+  policyId  String
+  policy    Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  version   Int
+  snapshot  Json
+  changedBy String
+  author    User     @relation(fields: [changedBy], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([policyId, version])
+  @@index([policyId])
+  @@map("policy_versions")
+}
+
+// ─── Indicator ──────────────────────────────────────────────
+
+model Indicator {
+  id           String   @id @default(cuid())
+  policyId     String
+  policy       Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  name         String
+  unit         String
+  targetValue  Float
+  currentValue Float    @default(0)
+  measuredAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([policyId])
+  @@map("indicators")
+}
+
+// ─── StatusHistory (append-only, immutable audit trail) ─────
+
+model StatusHistory {
+  id         String        @id @default(cuid())
+  policyId   String
+  policy     Policy        @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  fromStatus PolicyStatus?
+  toStatus   PolicyStatus
+  changedBy  String
+  author     User          @relation(fields: [changedBy], references: [id])
+  reason     String?
+  createdAt  DateTime      @default(now())
+
+  @@index([policyId])
+  @@map("status_history")
+}
+
+// ─── Source ─────────────────────────────────────────────────
+
+model Source {
+  id          String     @id @default(cuid())
+  policyId    String
+  policy      Policy     @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  url         String
+  title       String
+  type        SourceType @default(UNVERIFIED)
+  archivedUrl String?
+  addedBy     String
+  author      User       @relation(fields: [addedBy], references: [id])
+  createdAt   DateTime   @default(now())
+
+  @@index([policyId])
+  @@map("sources")
+}
+
+// ─── User ───────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  phone         String?   @unique
+  passwordHash  String?
+  role          UserRole  @default(VISITOR)
+  level         UserLevel @default(OBSERVER)
+  oauthProvider String?
+  oauthId       String?
+  avatarUrl     String?
+  bio           String?
+  isVerified    Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  consentGiven  Boolean   @default(false)
+  consentAt     DateTime?
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  createdPolicies   Policy[]        @relation("PolicyCreator")
+  policyVersions    PolicyVersion[]
+  statusHistories   StatusHistory[]
+  sources           Source[]
+  contributions     Contribution[]
+  comments          Comment[]
+  votes             Vote[]
+  subscriptions     Subscription[]
+  auditLogs         AuditLog[]
+  sentNotifications Notification[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+// ─── Contribution ───────────────────────────────────────────
+
+model Contribution {
+  id             String             @id @default(cuid())
+  userId         String
+  user           User               @relation(fields: [userId], references: [id])
+  policyId       String
+  policy         Policy             @relation(fields: [policyId], references: [id])
+  type           ContributionType
+  content        String             @db.Text
+  filePath       String?
+  fileSize       Int?
+  mimeType       String?
+  location       String?
+  region         SenegalRegion?
+  status         ContributionStatus @default(PENDING)
+  reliability    Int                @default(0)
+  moderatorId    String?
+  moderatorNote  String?
+  reviewedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  votes Vote[] @relation("ContributionVotes")
+
+  @@index([userId])
+  @@index([policyId])
+  @@index([status])
+  @@map("contributions")
+}
+
+// ─── Comment ────────────────────────────────────────────────
+
+model Comment {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  policyId  String
+  policy    Policy    @relation(fields: [policyId], references: [id])
+  parentId  String?
+  parent    Comment?  @relation("Replies", fields: [parentId], references: [id])
+  children  Comment[] @relation("Replies")
+  body      String    @db.Text
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  votes Vote[] @relation("CommentVotes")
+
+  @@index([policyId])
+  @@index([userId])
+  @@index([parentId])
+  @@map("comments")
+}
+
+// ─── Vote ───────────────────────────────────────────────────
+
+model Vote {
+  id             String         @id @default(cuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id])
+  targetId       String
+  targetType     VoteTargetType
+  value          Int
+  policyVote     Policy?        @relation("PolicyVotes", fields: [targetId], references: [id], map: "vote_policy_fk")
+  contributionVote Contribution? @relation("ContributionVotes", fields: [targetId], references: [id], map: "vote_contribution_fk")
+  commentVote    Comment?       @relation("CommentVotes", fields: [targetId], references: [id], map: "vote_comment_fk")
+  createdAt      DateTime       @default(now())
+
+  @@unique([userId, targetId, targetType])
+  @@index([targetId, targetType])
+  @@map("votes")
+}
+
+// ─── Subscription ───────────────────────────────────────────
+
+model Subscription {
+  id        String                @id @default(cuid())
+  userId    String
+  user      User                  @relation(fields: [userId], references: [id])
+  policyId  String
+  policy    Policy                @relation(fields: [policyId], references: [id])
+  channels  NotificationChannel[]
+  createdAt DateTime              @default(now())
+
+  @@unique([userId, policyId])
+  @@index([policyId])
+  @@map("subscriptions")
+}
+
+// ─── Notification ───────────────────────────────────────────
+
+model Notification {
+  id        String              @id @default(cuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  body      String
+  channel   NotificationChannel
+  readAt    DateTime?
+  sentAt    DateTime?
+  metadata  Json                @default("{}")
+  createdAt DateTime            @default(now())
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+// ─── AuditLog (immutable — no updates, no deletes) ──────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  actor     User     @relation(fields: [actorId], references: [id])
+  action    String
+  entity    String
+  entityId  String
+  payload   Json     @default("{}")
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
