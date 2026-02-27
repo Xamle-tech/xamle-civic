@@ -1,83 +1,71 @@
 #!/bin/bash
+
+# ============================================================
+# Script de Déploiement Backend sur VPS
+# Usage: ./scripts/deploy-vps.sh
+# ============================================================
+
 set -e
 
-# ============================================================
-# Xamle Civic — VPS Deployment Script
-# ============================================================
+echo "🚀 Démarrage du déploiement Backend sur VPS..."
 
-echo "🚀 Déploiement de Xamle Civic sur VPS"
-echo "======================================"
-echo ""
-
-# Colors
+# Couleurs pour les messages
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Check if .env.production exists
-if [ ! -f .env.production ]; then
-    echo -e "${RED}❌ Erreur: .env.production n'existe pas${NC}"
-    echo "Copiez .env.production.example vers .env.production et remplissez les valeurs"
+# Vérifier que nous sommes dans le bon répertoire
+if [ ! -f "docker-compose.vps.yml" ]; then
+    echo -e "${RED}❌ Erreur: docker-compose.vps.yml non trouvé${NC}"
+    echo "Assurez-vous d'être à la racine du projet"
     exit 1
 fi
 
-# Load environment variables
-export $(grep -v '^#' .env.production | xargs)
-
-echo "📦 Étape 1: Pull des dernières images Docker"
-docker compose -f docker-compose.vps.yml pull
-
-echo ""
-echo "🔨 Étape 2: Build de l'API"
-docker compose -f docker-compose.vps.yml build api
-
-echo ""
-echo "🗄️  Étape 3: Démarrage de la base de données"
-docker compose -f docker-compose.vps.yml up -d postgres redis meilisearch minio
-
-echo ""
-echo "⏳ Attente de la disponibilité des services..."
-sleep 10
-
-echo ""
-echo "🔄 Étape 4: Migrations de la base de données"
-docker compose -f docker-compose.vps.yml run --rm api sh -c "npx prisma migrate deploy"
-
-echo ""
-echo "🌱 Étape 5: Seed de la base de données (optionnel)"
-read -p "Voulez-vous seeder la base de données ? (y/N) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    docker compose -f docker-compose.vps.yml run --rm api sh -c "node dist/seed.js"
+# Vérifier que .env.production existe
+if [ ! -f ".env.production" ]; then
+    echo -e "${RED}❌ Erreur: .env.production non trouvé${NC}"
+    echo "Copiez backend/.env.example vers .env.production et configurez-le"
+    exit 1
 fi
 
-echo ""
-echo "🚀 Étape 6: Démarrage de tous les services"
+# Charger les variables d'environnement
+export $(cat .env.production | grep -v '^#' | xargs)
+
+echo -e "${YELLOW}📦 Récupération des dernières modifications...${NC}"
+git pull origin main
+
+echo -e "${YELLOW}🛑 Arrêt des services existants...${NC}"
+docker compose -f docker-compose.vps.yml down
+
+echo -e "${YELLOW}🔨 Build des images Docker...${NC}"
+docker compose -f docker-compose.vps.yml build --no-cache api
+
+echo -e "${YELLOW}🚀 Démarrage des services...${NC}"
 docker compose -f docker-compose.vps.yml up -d
 
-echo ""
-echo "🔍 Étape 7: Vérification de l'état des services"
-sleep 5
+echo -e "${YELLOW}⏳ Attente du démarrage de l'API (30s)...${NC}"
+sleep 30
+
+echo -e "${YELLOW}🔍 Vérification de la santé de l'API...${NC}"
+if curl -f -s "http://localhost:4000/health" > /dev/null; then
+    echo -e "${GREEN}✅ API démarrée avec succès !${NC}"
+else
+    echo -e "${RED}❌ Erreur: L'API ne répond pas${NC}"
+    echo "Vérifiez les logs avec: docker compose -f docker-compose.vps.yml logs api"
+    exit 1
+fi
+
+echo -e "${YELLOW}📊 Statut des services:${NC}"
 docker compose -f docker-compose.vps.yml ps
 
-echo ""
-echo "📊 Étape 8: Logs des services"
-docker compose -f docker-compose.vps.yml logs --tail=50
-
-echo ""
-echo -e "${GREEN}✅ Déploiement terminé !${NC}"
-echo ""
-echo "🌐 Services disponibles:"
-echo "  - API:          https://${DOMAIN}/api/v1"
-echo "  - Swagger:      https://${DOMAIN}/api/docs"
-echo "  - Health:       https://${DOMAIN}/health"
-echo "  - MinIO Console: https://${DOMAIN}/minio-console"
-echo "  - Monitoring:   http://localhost:3001"
+echo -e "${GREEN}✅ Déploiement terminé avec succès !${NC}"
 echo ""
 echo "📝 Commandes utiles:"
-echo "  - Voir les logs:        docker compose -f docker-compose.vps.yml logs -f"
-echo "  - Redémarrer:           docker compose -f docker-compose.vps.yml restart"
-echo "  - Arrêter:              docker compose -f docker-compose.vps.yml down"
-echo "  - Mise à jour:          ./scripts/deploy-vps.sh"
+echo "  - Voir les logs: docker compose -f docker-compose.vps.yml logs -f"
+echo "  - Redémarrer: docker compose -f docker-compose.vps.yml restart"
+echo "  - Arrêter: docker compose -f docker-compose.vps.yml down"
 echo ""
+echo "🌐 URLs:"
+echo "  - API Health: https://${DOMAIN}/health"
+echo "  - API Docs: https://${DOMAIN}/api/docs"
